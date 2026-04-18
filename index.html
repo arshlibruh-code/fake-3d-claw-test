@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fake 3D Image</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quantico:wght@700&display=swap" rel="stylesheet">
   <script type="importmap">
   {
     "imports": {
@@ -15,103 +18,193 @@
   </script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000; overflow: hidden; font-family: 'JetBrains Mono', 'Courier New', monospace; }
+
+    :root {
+      --panel-w: 210px;
+      --gap: 10px;
+      --label-size: 9px;
+      --btn-height: 32px;
+      --radius: 0px;
+    }
+
+    body {
+      background: #000;
+      overflow: hidden;
+      font-family: 'Quantico', monospace;
+      color: #fff;
+    }
 
     #canvas-container { width: 100vw; height: 100vh; }
 
+    /* ── Desktop panel ─────────────────────────────────────────── */
     #ui {
       position: fixed;
       top: 20px;
       left: 20px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: var(--gap);
       z-index: 10;
-      width: 200px;
+      width: var(--panel-w);
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
     }
 
+    /* ── Mobile bottom sheet ───────────────────────────────────── */
+    #sheet {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      flex-direction: column;
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: translateY(calc(100% - 48px)); /* collapsed — show handle only */
+    }
+    #sheet.expanded { transform: translateY(0); }
+    #sheet-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 48px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    #sheet-handle-bar {
+      width: 36px;
+      height: 3px;
+      background: rgba(255,255,255,0.25);
+      border-radius: 2px;
+    }
+    #sheet-body {
+      padding: 0 16px 24px;
+      overflow-y: auto;
+      max-height: 55vh;
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap);
+    }
+
+    @media (max-width: 600px) {
+      #ui { display: none; }
+      #sheet { display: flex; }
+    }
+
+    /* ── Shared controls ──────────────────────────────────────── */
     .ctrl-row {
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4px;
     }
 
     .ctrl-label {
-      font-size: 9px;
-      letter-spacing: 0.12em;
+      font-size: var(--label-size);
+      font-weight: 700;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
       color: rgba(255,255,255,0.4);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    .ctrl-label span { color: rgba(255,255,255,0.6); font-size: 10px; }
+    .ctrl-label span { color: rgba(255,255,255,0.75); font-size: 11px; }
 
     input[type="range"] {
       -webkit-appearance: none;
       width: 100%;
       height: 2px;
-      background: rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.15);
       outline: none;
       cursor: pointer;
     }
     input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 10px;
-      height: 10px;
+      width: 12px;
+      height: 12px;
       background: #fff;
       cursor: pointer;
     }
-    input[type="range"]:disabled { opacity: 0.3; cursor: not-allowed; }
+    input[type="range"]:disabled { opacity: 0.25; cursor: not-allowed; }
 
-    .btn-row { display: flex; gap: 6px; }
+    .btn-row { display: flex; gap: 8px; }
 
     button {
       background: rgba(255,255,255,0.07);
       border: 1px solid rgba(255,255,255,0.15);
-      color: rgba(255,255,255,0.7);
-      font-family: inherit;
-      font-size: 9px;
-      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.8);
+      font-family: 'Quantico', monospace;
+      font-weight: 700;
+      font-size: var(--label-size);
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      padding: 6px 10px;
+      padding: 0 12px;
+      height: var(--btn-height);
       cursor: pointer;
       flex: 1;
-      transition: background 0.12s;
+      transition: background 0.12s, color 0.12s;
+      white-space: nowrap;
     }
-    button:hover { background: rgba(255,255,255,0.14); }
-    button.active { background: rgba(255,255,255,0.22); color: #fff; border-color: rgba(255,255,255,0.4); }
+    button:hover { background: rgba(255,255,255,0.13); }
+    button.active {
+      background: rgba(255,255,255,0.18);
+      color: #fff;
+      border-color: rgba(255,255,255,0.35);
+    }
 
     #drop-zone {
       background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.18);
-      color: rgba(255,255,255,0.7);
-      padding: 8px 10px;
-      font-size: 9px;
-      letter-spacing: 0.08em;
-      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.8);
+      font-family: 'Quantico', monospace;
+      font-weight: 700;
+      font-size: var(--label-size);
+      letter-spacing: 0.1em;
       text-transform: uppercase;
+      padding: 0 12px;
+      height: var(--btn-height);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.12s;
       text-align: center;
-      transition: background 0.15s;
     }
     #drop-zone:hover { background: rgba(255,255,255,0.12); }
     #drop-zone.drag-over { background: rgba(255,255,255,0.2); border-color: #fff; }
     #file-input { display: none; }
 
-    hr.sep { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 4px 0; }
+    #status-text {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      min-height: 14px;
+      text-align: center;
+    }
+
+    hr.sep { border: none; border-top: 1px solid rgba(255,255,255,0.07); }
   </style>
 </head>
 <body>
 
 <div id="canvas-container"></div>
 
+<!-- Desktop panel -->
 <div id="ui">
   <div id="drop-zone" onclick="document.getElementById('file-input').click()">
     Drop image or click to load
   </div>
   <input type="file" id="file-input" accept="image/*" />
-
-  <div id="status-text" style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:0.08em;text-transform:uppercase;min-height:14px;"></div>
+  <div id="status-text"></div>
 
   <hr class="sep" />
 
@@ -121,13 +214,13 @@
   </div>
 
   <div class="ctrl-row">
-    <div class="ctrl-label">Displacement <span id="val-disp">2.0</span></div>
-    <input type="range" id="sl-disp" min="0" max="5" step="0.05" value="2.0" />
+    <div class="ctrl-label">Displacement <span id="val-disp">1.00</span></div>
+    <input type="range" id="sl-disp" min="-2" max="2" step="0.01" value="1" />
   </div>
 
   <div class="ctrl-row">
-    <div class="ctrl-label">Roughness <span id="val-rough">0.5</span></div>
-    <input type="range" id="sl-rough" min="0" max="1" step="0.01" value="0.5" />
+    <div class="ctrl-label">Smoothness <span id="val-smooth">2.0</span></div>
+    <input type="range" id="sl-smooth" min="0" max="5" step="0.1" value="2" />
   </div>
 
   <hr class="sep" />
@@ -138,19 +231,73 @@
   </div>
 
   <div class="ctrl-row">
-    <div class="ctrl-label">Spin Speed <span id="val-spin">1.0</span></div>
-    <input type="range" id="sl-spin" min="0.1" max="3" step="0.05" value="1.0" disabled />
+    <div class="ctrl-label">Spin Speed <span id="val-spin">1.00</span></div>
+    <input type="range" id="sl-spin" min="0.1" max="3" step="0.05" value="1" disabled />
   </div>
 
   <hr class="sep" />
 
   <div class="ctrl-row">
-    <div class="ctrl-label">Plane Y <span id="val-yoff">0.0</span></div>
-    <input type="range" id="sl-yoff" min="-2" max="2" step="0.05" value="0" />
+    <div class="ctrl-label">Plane Y <span id="val-yoff">0.00</span></div>
+    <input type="range" id="sl-yoff" min="-2" max="2" step="0.01" value="0" />
   </div>
 
   <div class="btn-row">
     <button id="btn-reset">Reset</button>
+  </div>
+</div>
+
+<!-- Mobile bottom sheet -->
+<div id="sheet">
+  <div id="sheet-handle" onclick="toggleSheet()">
+    <div id="sheet-handle-bar"></div>
+  </div>
+  <div id="sheet-body">
+    <div id="drop-zone-mobile" onclick="document.getElementById('file-input').click()">
+      Drop image or click to load
+    </div>
+    <input type="file" id="file-input-mobile" accept="image/*" style="display:none" />
+    <div id="status-text-mobile" style="font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.3);text-align:center;min-height:14px;"></div>
+
+    <hr class="sep" />
+
+    <div class="ctrl-row">
+      <div class="ctrl-label">Segments <span id="m-val-segments">256</span></div>
+      <input type="range" id="m-sl-segments" min="32" max="512" step="32" value="256" />
+    </div>
+
+    <div class="ctrl-row">
+      <div class="ctrl-label">Displacement <span id="m-val-disp">1.00</span></div>
+      <input type="range" id="m-sl-disp" min="-2" max="2" step="0.01" value="1" />
+    </div>
+
+    <div class="ctrl-row">
+      <div class="ctrl-label">Smoothness <span id="m-val-smooth">2.0</span></div>
+      <input type="range" id="m-sl-smooth" min="0" max="5" step="0.1" value="2" />
+    </div>
+
+    <hr class="sep" />
+
+    <div class="btn-row">
+      <button id="m-btn-wireframe">Wireframe</button>
+      <button id="m-btn-spin">Spin</button>
+    </div>
+
+    <div class="ctrl-row">
+      <div class="ctrl-label">Spin Speed <span id="m-val-spin">1.00</span></div>
+      <input type="range" id="m-sl-spin" min="0.1" max="3" step="0.05" value="1" disabled />
+    </div>
+
+    <hr class="sep" />
+
+    <div class="ctrl-row">
+      <div class="ctrl-label">Plane Y <span id="m-val-yoff">0.00</span></div>
+      <input type="range" id="m-sl-yoff" min="-2" max="2" step="0.01" value="0" />
+    </div>
+
+    <div class="btn-row">
+      <button id="m-btn-reset">Reset</button>
+    </div>
   </div>
 </div>
 
@@ -176,8 +323,7 @@
   controls.dampingFactor = 0.06;
 
   // ── Lights ─────────────────────────────────────────────────────────────────
-  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-  scene.add(ambient);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
   const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
   dirLight.position.set(5, 10, 7);
@@ -185,12 +331,12 @@
   scene.add(dirLight);
 
   // ── Material & Mesh ─────────────────────────────────────────────────────────
-  let currentTex = null;
+  let sharpTex = null;
+  let dispTex = null;
+  let smoothRadius = 2.0;
 
   const mat = new THREE.MeshStandardMaterial({
-    displacementScale: 2.0,
-    roughness: 0.5,
-    metalness: 0.0,
+    displacementScale: 1.0,
     side: THREE.DoubleSide,
     wireframe: false,
   });
@@ -199,10 +345,7 @@
   mesh = buildMesh(256);
 
   function buildMesh(segments) {
-    if (mesh) {
-      scene.remove(mesh);
-      mesh.geometry.dispose();
-    }
+    if (mesh) { scene.remove(mesh); mesh.geometry.dispose(); }
     const geo = new THREE.PlaneGeometry(10, 10, segments, segments);
     geo.rotateX(-Math.PI / 2);
     mesh = new THREE.Mesh(geo, mat);
@@ -211,163 +354,292 @@
     return mesh;
   }
 
-  // ── Texture loading ─────────────────────────────────────────────────────────
+  // ── Canvas-based blur for displacement ─────────────────────────────────────
+  function blurImageData(img, radius) {
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = img.height;
+    const ctx = c.getContext('2d');
+    ctx.filter = `blur(${radius}px)`;
+    ctx.drawImage(img, 0, 0);
+    return c;
+  }
+
+  // ── Texture loading with two instances ─────────────────────────────────────
   const loader = new THREE.TextureLoader();
 
-  function setStatus(msg) {
-    document.getElementById('status-text').textContent = msg;
+  function setStatus(msg, elId) {
+    const el = elId ? document.getElementById(elId) : null;
+    if (el) el.textContent = msg;
   }
 
-  function loadTexture(url) {
-    setStatus('Loading texture...');
-    loader.load(
-      url,
-      (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        if (currentTex && currentTex !== mat.map) currentTex.dispose();
-        currentTex = tex;
-        mat.map = tex;
-        mat.displacementMap = tex;
-        mat.needsUpdate = true;
-        setStatus('Texture ready');
-      },
-      undefined,
-      (err) => {
-        setStatus('Error: ' + (err?.message || String(err)));
+  function loadTexture(url, targetDispRadius) {
+    const statusEl = 'status-text';
+    const mobileStatusEl = 'status-text-mobile';
+    setStatus('Loading...', statusEl);
+    setStatus('Loading...', mobileStatusEl);
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Sharp texture for display
+      const sharpCanvas = document.createElement('canvas');
+      sharpCanvas.width = img.width;
+      sharpCanvas.height = img.height;
+      sharpCanvas.getContext('2d').drawImage(img, 0, 0);
+      const sharpTexImg = new Image();
+      sharpTexImg.src = sharpCanvas.toDataURL('image/jpeg', 0.92);
+      sharpTexImg.onload = () => {
+        if (sharpTex) sharpTex.dispose();
+        sharpTex = new THREE.Texture(sharpTexImg);
+        sharpTex.colorSpace = THREE.SRGBColorSpace;
+        sharpTex.needsUpdate = true;
+        mat.map = sharpTex;
+        applyDispBlur(img, targetDispRadius ?? smoothRadius);
+      };
+
+      // If image is already loaded as texture elsewhere, update map now
+      if (!mat.map) {
+        mat.map = sharpTex;
       }
-    );
+      mat.needsUpdate = true;
+    };
+    img.onerror = () => {
+      setStatus('Load failed', statusEl);
+      setStatus('Load failed', mobileStatusEl);
+    };
+    img.src = url;
   }
 
-  loadTexture('./texture.jpg');
-
-  function applyImageFile(file) {
-    if (!file || !file.type.startsWith('image/')) return;
-    if (currentTex && currentTex.image && currentTex.image.src) {
-      URL.revokeObjectURL(currentTex.image.src);
+  function applyDispBlur(img, radius) {
+    if (dispTex) dispTex.dispose();
+    if (radius <= 0) {
+      // No blur — use sharp texture as displacement too
+      if (sharpTex) {
+        mat.displacementMap = sharpTex;
+        mat.displacementMap.needsUpdate = true;
+      }
+    } else {
+      const blurredCanvas = blurImageData(img, radius);
+      const dispTexImg = new Image();
+      dispTexImg.src = blurredCanvas.toDataURL('image/jpeg', 0.92);
+      dispTexImg.onload = () => {
+        dispTex = new THREE.Texture(dispTexImg);
+        dispTex.colorSpace = THREE.SRGBColorSpace;
+        dispTex.needsUpdate = true;
+        mat.displacementMap = dispTex;
+        mat.needsUpdate = true;
+      };
     }
-    loadTexture(URL.createObjectURL(file));
+    setStatus('Ready', 'status-text');
+    setStatus('Ready', 'mobileStatusEl');
   }
 
-  document.getElementById('file-input').addEventListener('change', (e) => {
-    applyImageFile(e.target.files[0]);
-  });
+  function loadAndApply(url, dispRadius) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      if (sharpTex) sharpTex.dispose();
+      sharpTex = new THREE.Texture(img);
+      sharpTex.colorSpace = THREE.SRGBColorSpace;
+      sharpTex.needsUpdate = true;
+      mat.map = sharpTex;
+      applyDispBlur(img, dispRadius ?? smoothRadius);
+      mat.needsUpdate = true;
+    };
+    img.onerror = () => {
+      setStatus('Load failed', 'status-text');
+      setStatus('Load failed', 'mobileStatusEl');
+    };
+    img.src = url;
+  }
+
+  loadAndApply('./texture.jpg', smoothRadius);
+
+  // ── File input ─────────────────────────────────────────────────────────────
+  function handleFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    URL.revokeObjectURL(mat.map?.image?.src ?? '');
+    loadAndApply(URL.createObjectURL(file), smoothRadius);
+  }
+
+  document.getElementById('file-input').addEventListener('change', (e) => handleFile(e.target.files[0]));
+  document.getElementById('file-input-mobile')?.addEventListener('change', (e) => handleFile(e.target.files[0]));
 
   const dropZone = document.getElementById('drop-zone');
-  document.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-  document.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  const dropZoneMobile = document.getElementById('drop-zone-mobile');
+  document.addEventListener('dragover', (e) => { e.preventDefault(); dropZone?.classList.add('drag-over'); dropZoneMobile?.classList.add('drag-over'); });
+  document.addEventListener('dragleave', () => { dropZone?.classList.remove('drag-over'); dropZoneMobile?.classList.remove('drag-over'); });
   document.addEventListener('drop', (e) => {
     e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    applyImageFile(e.dataTransfer.files[0]);
+    dropZone?.classList.remove('drag-over');
+    dropZoneMobile?.classList.remove('drag-over');
+    handleFile(e.dataTransfer.files[0]);
   });
 
   // ── State ──────────────────────────────────────────────────────────────────
   let spinning = false;
   let spinSpeed = 1.0;
   let targetSegs = 256;
-  let pendingRebuild = false;
+  let currentDisp = 1.0;
+  let currentSmooth = 2.0;
 
-  const DEFAULTS = {
-    disp: 2.0, rough: 0.5, segs: 256, spin: 1.0, yoff: 0,
-  };
+  const DEFAULTS = { disp: 1.0, smooth: 2.0, segs: 256, spin: 1.0, yoff: 0 };
 
-  // ── Slider bindings ────────────────────────────────────────────────────────
-  const slDisp   = document.getElementById('sl-disp');
-  const slRough  = document.getElementById('sl-rough');
-  const slSegs   = document.getElementById('sl-segments');
-  const slSpin  = document.getElementById('sl-spin');
-  const slYOff  = document.getElementById('sl-yoff');
+  // ── Slider helpers ─────────────────────────────────────────────────────────
+  function bindSlider(desktopId, mobileId, onUpdate) {
+    const dEl = document.getElementById(desktopId);
+    const mEl = document.getElementById(mobileId);
+    const sync = (e) => onUpdate(parseFloat(e.target.value));
+    dEl?.addEventListener('input', sync);
+    mEl?.addEventListener('input', sync);
+  }
 
-  slDisp.addEventListener('input', () => {
-    mat.displacementScale = parseFloat(slDisp.value);
-    document.getElementById('val-disp').textContent = parseFloat(slDisp.value).toFixed(2);
+  function updateVal(labelId, mobileLabelId, val) {
+    const formatted = parseFloat(val).toFixed(2);
+    document.getElementById(labelId).textContent = formatted;
+    const m = document.getElementById(mobileLabelId);
+    if (m) m.textContent = formatted;
+  }
+
+  // Segments
+  bindSlider('sl-segments', 'm-sl-segments', (v) => {
+    targetSegs = parseInt(v);
+    updateVal('val-segments', 'm-val-segments', targetSegs);
+  });
+  document.getElementById('sl-segments').addEventListener('change', () => buildMesh(targetSegs));
+  document.getElementById('m-sl-segments').addEventListener('change', () => buildMesh(targetSegs));
+
+  // Displacement
+  bindSlider('sl-disp', 'm-sl-disp', (v) => {
+    currentDisp = v;
+    mat.displacementScale = v;
+    updateVal('val-disp', 'm-val-disp', v);
   });
 
-  slRough.addEventListener('input', () => {
-    mat.roughness = parseFloat(slRough.value);
-    document.getElementById('val-rough').textContent = parseFloat(slRough.value).toFixed(2);
+  // Smoothness
+  bindSlider('sl-smooth', 'm-sl-smooth', (v) => {
+    currentSmooth = v;
+    updateVal('val-smooth', 'm-val-smooth', v.toFixed(1));
+  });
+  document.getElementById('sl-smooth').addEventListener('change', () => {
+    if (mat.map?.image) applyDispBlur(mat.map.image, currentSmooth);
+  });
+  document.getElementById('m-sl-smooth').addEventListener('change', () => {
+    if (mat.map?.image) applyDispBlur(mat.map.image, currentSmooth);
   });
 
-  slSegs.addEventListener('input', () => {
-    targetSegs = parseInt(slSegs.value);
-    document.getElementById('val-segments').textContent = targetSegs;
-  });
-  slSegs.addEventListener('change', () => {
-    buildMesh(targetSegs);
+  // Spin speed
+  bindSlider('sl-spin', 'm-sl-spin', (v) => {
+    spinSpeed = v;
+    updateVal('val-spin', 'm-val-spin', v);
   });
 
-  slSpin.addEventListener('input', () => {
-    spinSpeed = parseFloat(slSpin.value);
-    document.getElementById('val-spin').textContent = spinSpeed.toFixed(2);
+  // Plane Y
+  bindSlider('sl-yoff', 'm-sl-yoff', (v) => {
+    mesh.position.y = v;
+    updateVal('val-yoff', 'm-val-yoff', v);
   });
 
-  slYOff.addEventListener('input', () => {
-    mesh.position.y = parseFloat(slYOff.value);
-    document.getElementById('val-yoff').textContent = parseFloat(slYOff.value).toFixed(2);
+  // ── Buttons ─────────────────────────────────────────────────────────────────
+  let wireframeOn = false;
+  let mobileWireframeOn = false;
+  document.getElementById('btn-wireframe').addEventListener('click', () => {
+    wireframeOn = !wireframeOn;
+    mat.wireframe = wireframeOn;
+    document.getElementById('btn-wireframe').classList.toggle('active', wireframeOn);
+    const mb = document.getElementById('m-btn-wireframe');
+    if (mb) mb.classList.toggle('active', wireframeOn);
+    mobileWireframeOn = wireframeOn;
+  });
+  document.getElementById('m-btn-wireframe')?.addEventListener('click', () => {
+    mobileWireframeOn = !mobileWireframeOn;
+    mat.wireframe = mobileWireframeOn;
+    document.getElementById('m-btn-wireframe').classList.toggle('active', mobileWireframeOn);
+    document.getElementById('btn-wireframe').classList.toggle('active', mobileWireframeOn);
+    wireframeOn = mobileWireframeOn;
   });
 
-  // ── Buttons ────────────────────────────────────────────────────────────────
-  const btnWireframe = document.getElementById('btn-wireframe');
-  const btnSpin = document.getElementById('btn-spin');
-  const btnReset = document.getElementById('btn-reset');
-
-  btnWireframe.addEventListener('click', () => {
-    mat.wireframe = !mat.wireframe;
-    btnWireframe.classList.toggle('active', mat.wireframe);
-  });
-
-  btnSpin.addEventListener('click', () => {
+  document.getElementById('btn-spin').addEventListener('click', () => {
     spinning = !spinning;
-    btnSpin.classList.toggle('active', spinning);
-    slSpin.disabled = !spinning;
+    document.getElementById('btn-spin').classList.toggle('active', spinning);
+    document.getElementById('m-btn-spin').classList.toggle('active', spinning);
+    const s = document.getElementById('sl-spin');
+    const m = document.getElementById('m-sl-spin');
+    s.disabled = !spinning;
+    m.disabled = !spinning;
+  });
+  document.getElementById('m-btn-spin')?.addEventListener('click', () => {
+    spinning = !spinning;
+    document.getElementById('m-btn-spin').classList.toggle('active', spinning);
+    document.getElementById('btn-spin').classList.toggle('active', spinning);
+    const s = document.getElementById('sl-spin');
+    const m = document.getElementById('m-sl-spin');
+    s.disabled = !spinning;
+    m.disabled = !spinning;
   });
 
-  btnReset.addEventListener('click', () => {
-    slDisp.value = DEFAULTS.disp;
-    slRough.value = DEFAULTS.rough;
-    slSegs.value = DEFAULTS.segs;
-    slSpin.value = DEFAULTS.spin;
-    slYOff.value = DEFAULTS.yoff;
+  document.getElementById('btn-reset').addEventListener('click', doReset);
+  document.getElementById('m-btn-reset')?.addEventListener('click', doReset);
+
+  function doReset() {
+    currentDisp = DEFAULTS.disp;
+    currentSmooth = DEFAULTS.smooth;
+    targetSegs = DEFAULTS.segs;
+    spinSpeed = DEFAULTS.spin;
+    spinning = false;
+    wireframeOn = false;
+    mobileWireframeOn = false;
 
     mat.displacementScale = DEFAULTS.disp;
-    mat.roughness = DEFAULTS.rough;
-    spinSpeed = DEFAULTS.spin;
-    targetSegs = DEFAULTS.segs;
+    mat.wireframe = false;
     mesh.position.y = DEFAULTS.yoff;
 
-    document.getElementById('val-disp').textContent = DEFAULTS.disp.toFixed(2);
-    document.getElementById('val-rough').textContent = DEFAULTS.rough.toFixed(2);
-    document.getElementById('val-segments').textContent = DEFAULTS.segs;
-    document.getElementById('val-spin').textContent = DEFAULTS.spin.toFixed(2);
-    document.getElementById('val-yoff').textContent = DEFAULTS.yoff.toFixed(2);
+    // sliders
+    document.getElementById('sl-segments').value = DEFAULTS.segs;
+    document.getElementById('sl-disp').value = DEFAULTS.disp;
+    document.getElementById('sl-smooth').value = DEFAULTS.smooth;
+    document.getElementById('sl-spin').value = DEFAULTS.spin;
+    document.getElementById('sl-yoff').value = DEFAULTS.yoff;
+    document.getElementById('m-sl-segments').value = DEFAULTS.segs;
+    document.getElementById('m-sl-disp').value = DEFAULTS.disp;
+    document.getElementById('m-sl-smooth').value = DEFAULTS.smooth;
+    document.getElementById('m-sl-spin').value = DEFAULTS.spin;
+    document.getElementById('m-sl-yoff').value = DEFAULTS.yoff;
 
-    slSpin.disabled = true;
-    spinning = false;
-    btnSpin.classList.remove('active');
-    btnWireframe.classList.remove('active');
-    mat.wireframe = false;
+    document.getElementById('sl-spin').disabled = true;
+    document.getElementById('m-sl-spin').disabled = true;
+
+    ['btn-wireframe','btn-spin'].forEach(id => document.getElementById(id).classList.remove('active'));
+    ['m-btn-wireframe','m-btn-spin'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+
+    updateVal('val-segments', 'm-val-segments', DEFAULTS.segs);
+    updateVal('val-disp', 'm-val-disp', DEFAULTS.disp);
+    updateVal('val-smooth', 'm-val-smooth', DEFAULTS.smooth);
+    updateVal('val-spin', 'm-val-spin', DEFAULTS.spin);
+    updateVal('val-yoff', 'm-val-yoff', DEFAULTS.yoff);
 
     buildMesh(DEFAULTS.segs);
-  });
+    if (mat.map?.image) applyDispBlur(mat.map.image, DEFAULTS.smooth);
+  }
 
-  // ── Resize ─────────────────────────────────────────────────────────────────
+  // ── Mobile sheet toggle ─────────────────────────────────────────────────────
+  window.toggleSheet = function() {
+    document.getElementById('sheet').classList.toggle('expanded');
+  };
+
+  // ── Resize ──────────────────────────────────────────────────────────────────
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // ── Render loop ────────────────────────────────────────────────────────────
-  const clock = new THREE.Clock();
-
+  // ── Render loop ─────────────────────────────────────────────────────────────
   function animate() {
     requestAnimationFrame(animate);
     controls.update();
-
-    if (spinning) {
-      mesh.rotation.y += spinSpeed * 0.005;
-    }
-
+    if (spinning) mesh.rotation.y += spinSpeed * 0.005;
     renderer.render(scene, camera);
   }
   animate();
