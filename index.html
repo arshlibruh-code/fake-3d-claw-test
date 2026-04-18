@@ -14,7 +14,8 @@
   </script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000; overflow: hidden; font-family: monospace; }
+    body { background: #000; overflow: hidden; font-family: 'JetBrains Mono', 'Courier New', monospace; }
+
     #canvas-container { width: 100vw; height: 100vh; }
 
     #ui {
@@ -23,56 +24,80 @@
       left: 20px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
       z-index: 10;
+      width: 200px;
     }
+
+    .ctrl-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .ctrl-label {
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ctrl-label span { color: rgba(255,255,255,0.6); font-size: 10px; }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 2px;
+      background: rgba(255,255,255,0.18);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 10px;
+      height: 10px;
+      background: #fff;
+      cursor: pointer;
+    }
+    input[type="range"]:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-row { display: flex; gap: 6px; }
+
+    button {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7);
+      font-family: inherit;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 6px 10px;
+      cursor: pointer;
+      flex: 1;
+      transition: background 0.12s;
+    }
+    button:hover { background: rgba(255,255,255,0.14); }
+    button.active { background: rgba(255,255,255,0.22); color: #fff; border-color: rgba(255,255,255,0.4); }
 
     #drop-zone {
       background: rgba(255,255,255,0.07);
       border: 1px solid rgba(255,255,255,0.18);
       color: rgba(255,255,255,0.7);
-      padding: 10px 14px;
-      font-size: 11px;
+      padding: 8px 10px;
+      font-size: 9px;
       letter-spacing: 0.08em;
       cursor: pointer;
       text-transform: uppercase;
+      text-align: center;
       transition: background 0.15s;
-      white-space: nowrap;
     }
     #drop-zone:hover { background: rgba(255,255,255,0.12); }
     #drop-zone.drag-over { background: rgba(255,255,255,0.2); border-color: #fff; }
     #file-input { display: none; }
 
-    #slider-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    #slider-label {
-      font-size: 10px;
-      color: rgba(255,255,255,0.4);
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-    #disp-slider {
-      -webkit-appearance: none;
-      width: 180px;
-      height: 2px;
-      background: rgba(255,255,255,0.2);
-      outline: none;
-      cursor: pointer;
-    }
-    #disp-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 12px;
-      height: 12px;
-      background: #fff;
-      cursor: pointer;
-    }
-    #disp-val {
-      font-size: 10px;
-      color: rgba(255,255,255,0.5);
-    }
+    hr.sep { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 4px 0; }
   </style>
 </head>
 <body>
@@ -85,9 +110,44 @@
   </div>
   <input type="file" id="file-input" accept="image/*" />
 
-  <div id="slider-wrap">
-    <div id="slider-label">Displacement <span id="disp-val">2.0</span></div>
-    <input type="range" id="disp-slider" min="0" max="5" step="0.01" value="2.0" />
+  <hr class="sep" />
+
+  <div class="ctrl-row">
+    <div class="ctrl-label">Segments <span id="val-segments">256</span></div>
+    <input type="range" id="sl-segments" min="32" max="512" step="32" value="256" />
+  </div>
+
+  <div class="ctrl-row">
+    <div class="ctrl-label">Displacement <span id="val-disp">2.0</span></div>
+    <input type="range" id="sl-disp" min="0" max="5" step="0.05" value="2.0" />
+  </div>
+
+  <div class="ctrl-row">
+    <div class="ctrl-label">Roughness <span id="val-rough">0.5</span></div>
+    <input type="range" id="sl-rough" min="0" max="1" step="0.01" value="0.5" />
+  </div>
+
+  <hr class="sep" />
+
+  <div class="btn-row">
+    <button id="btn-wireframe">Wireframe</button>
+    <button id="btn-spin">Spin</button>
+  </div>
+
+  <div class="ctrl-row">
+    <div class="ctrl-label">Spin Speed <span id="val-spin">1.0</span></div>
+    <input type="range" id="sl-spin" min="0.1" max="3" step="0.05" value="1.0" disabled />
+  </div>
+
+  <hr class="sep" />
+
+  <div class="ctrl-row">
+    <div class="ctrl-label">Plane Y <span id="val-yoff">0.0</span></div>
+    <input type="range" id="sl-yoff" min="-2" max="2" step="0.05" value="0" />
+  </div>
+
+  <div class="btn-row">
+    <button id="btn-reset">Reset</button>
   </div>
 </div>
 
@@ -95,28 +155,24 @@
   import * as THREE from 'three';
   import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-  // Scene
+  // ── Scene ──────────────────────────────────────────────────────────────────
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
 
-  // Camera
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 1000);
   camera.position.set(0, 4, 8);
 
-  // Renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
   document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-  // Controls
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
-  controls.target.set(0, 0, 0);
 
-  // Lights
+  // ── Lights ─────────────────────────────────────────────────────────────────
   const ambient = new THREE.AmbientLight(0xffffff, 0.6);
   scene.add(ambient);
 
@@ -125,46 +181,58 @@
   dirLight.castShadow = true;
   scene.add(dirLight);
 
-  // Geometry + Material
-  const geo = new THREE.PlaneGeometry(10, 10, 256, 256);
-  geo.rotateX(-Math.PI / 2);
+  // ── Material & Mesh ─────────────────────────────────────────────────────────
+  let currentTex = null;
 
   const mat = new THREE.MeshStandardMaterial({
     displacementScale: 2.0,
+    roughness: 0.5,
+    metalness: 0.0,
+    side: THREE.DoubleSide,
+    wireframe: false,
   });
 
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.receiveShadow = true;
-  scene.add(mesh);
+  let mesh = buildMesh(256);
 
-  // Load default texture (bundled image)
+  function buildMesh(segments) {
+    if (mesh) {
+      scene.remove(mesh);
+      mesh.geometry.dispose();
+    }
+    const geo = new THREE.PlaneGeometry(10, 10, segments, segments);
+    geo.rotateX(-Math.PI / 2);
+    mesh = new THREE.Mesh(geo, mat);
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+    return mesh;
+  }
+
+  // ── Texture loading ─────────────────────────────────────────────────────────
   const loader = new THREE.TextureLoader();
-  loader.load('./texture.jpg', (tex) => {
-    tex.colorSpace = THREE.SRGBColorSpace;
-    mat.map = tex;
-    mat.displacementMap = tex;
-    mat.needsUpdate = true;
-  });
 
-  // File input handler
-  function applyImageFile(file) {
-    if (!file || !file.type.startsWith('image/')) return;
-    const url = URL.createObjectURL(file);
+  function loadTexture(url) {
     loader.load(url, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
-      if (mat.map) mat.map.dispose();
-      if (mat.displacementMap && mat.displacementMap !== mat.map) mat.displacementMap.dispose();
+      if (currentTex === mat.map && currentTex) currentTex.dispose();
+      currentTex = tex;
       mat.map = tex;
       mat.displacementMap = tex;
       mat.needsUpdate = true;
     });
   }
 
+  loadTexture('./texture.jpg');
+
+  function applyImageFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    URL.revokeObjectURL(mat.map?.image?.src ?? '');
+    loadTexture(URL.createObjectURL(file));
+  }
+
   document.getElementById('file-input').addEventListener('change', (e) => {
     applyImageFile(e.target.files[0]);
   });
 
-  // Drag and drop
   const dropZone = document.getElementById('drop-zone');
   document.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
   document.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
@@ -174,25 +242,113 @@
     applyImageFile(e.dataTransfer.files[0]);
   });
 
-  // Displacement slider
-  const slider = document.getElementById('disp-slider');
-  const dispVal = document.getElementById('disp-val');
-  slider.addEventListener('input', () => {
-    mat.displacementScale = parseFloat(slider.value);
-    dispVal.textContent = parseFloat(slider.value).toFixed(2);
+  // ── State ──────────────────────────────────────────────────────────────────
+  let spinning = false;
+  let spinSpeed = 1.0;
+  let targetSegs = 256;
+  let pendingRebuild = false;
+
+  const DEFAULTS = {
+    disp: 2.0, rough: 0.5, segs: 256, spin: 1.0, yoff: 0,
+  };
+
+  // ── Slider bindings ────────────────────────────────────────────────────────
+  const slDisp   = document.getElementById('sl-disp');
+  const slRough  = document.getElementById('sl-rough');
+  const slSegs   = document.getElementById('sl-segments');
+  const slSpin  = document.getElementById('sl-spin');
+  const slYOff  = document.getElementById('sl-yoff');
+
+  slDisp.addEventListener('input', () => {
+    mat.displacementScale = parseFloat(slDisp.value);
+    document.getElementById('val-disp').textContent = parseFloat(slDisp.value).toFixed(2);
   });
 
-  // Resize
+  slRough.addEventListener('input', () => {
+    mat.roughness = parseFloat(slRough.value);
+    document.getElementById('val-rough').textContent = parseFloat(slRough.value).toFixed(2);
+  });
+
+  slSegs.addEventListener('input', () => {
+    targetSegs = parseInt(slSegs.value);
+    document.getElementById('val-segments').textContent = targetSegs;
+  });
+  slSegs.addEventListener('change', () => {
+    buildMesh(targetSegs);
+  });
+
+  slSpin.addEventListener('input', () => {
+    spinSpeed = parseFloat(slSpin.value);
+    document.getElementById('val-spin').textContent = spinSpeed.toFixed(2);
+  });
+
+  slYOff.addEventListener('input', () => {
+    mesh.position.y = parseFloat(slYOff.value);
+    document.getElementById('val-yoff').textContent = parseFloat(slYOff.value).toFixed(2);
+  });
+
+  // ── Buttons ────────────────────────────────────────────────────────────────
+  const btnWireframe = document.getElementById('btn-wireframe');
+  const btnSpin = document.getElementById('btn-spin');
+  const btnReset = document.getElementById('btn-reset');
+
+  btnWireframe.addEventListener('click', () => {
+    mat.wireframe = !mat.wireframe;
+    btnWireframe.classList.toggle('active', mat.wireframe);
+  });
+
+  btnSpin.addEventListener('click', () => {
+    spinning = !spinning;
+    btnSpin.classList.toggle('active', spinning);
+    slSpin.disabled = !spinning;
+  });
+
+  btnReset.addEventListener('click', () => {
+    slDisp.value = DEFAULTS.disp;
+    slRough.value = DEFAULTS.rough;
+    slSegs.value = DEFAULTS.segs;
+    slSpin.value = DEFAULTS.spin;
+    slYOff.value = DEFAULTS.yoff;
+
+    mat.displacementScale = DEFAULTS.disp;
+    mat.roughness = DEFAULTS.rough;
+    spinSpeed = DEFAULTS.spin;
+    targetSegs = DEFAULTS.segs;
+    mesh.position.y = DEFAULTS.yoff;
+
+    document.getElementById('val-disp').textContent = DEFAULTS.disp.toFixed(2);
+    document.getElementById('val-rough').textContent = DEFAULTS.rough.toFixed(2);
+    document.getElementById('val-segments').textContent = DEFAULTS.segs;
+    document.getElementById('val-spin').textContent = DEFAULTS.spin.toFixed(2);
+    document.getElementById('val-yoff').textContent = DEFAULTS.yoff.toFixed(2);
+
+    slSpin.disabled = true;
+    spinning = false;
+    btnSpin.classList.remove('active');
+    btnWireframe.classList.remove('active');
+    mat.wireframe = false;
+
+    buildMesh(DEFAULTS.segs);
+  });
+
+  // ── Resize ─────────────────────────────────────────────────────────────────
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // Render loop
+  // ── Render loop ────────────────────────────────────────────────────────────
+  const clock = new THREE.Clock();
+
   function animate() {
     requestAnimationFrame(animate);
     controls.update();
+
+    if (spinning) {
+      mesh.rotation.y += spinSpeed * 0.005;
+    }
+
     renderer.render(scene, camera);
   }
   animate();
