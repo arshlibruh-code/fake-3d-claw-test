@@ -194,7 +194,8 @@
     wireframe: false,
   });
 
-  let mesh = buildMesh(256);
+  let mesh = null;
+  mesh = buildMesh(256);
 
   function buildMesh(segments) {
     if (mesh) {
