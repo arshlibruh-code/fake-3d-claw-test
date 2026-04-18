@@ -110,6 +110,8 @@
   </div>
   <input type="file" id="file-input" accept="image/*" />
 
+  <div id="status-text" style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:0.08em;text-transform:uppercase;min-height:14px;"></div>
+
   <hr class="sep" />
 
   <div class="ctrl-row">
@@ -210,22 +212,37 @@
   // ── Texture loading ─────────────────────────────────────────────────────────
   const loader = new THREE.TextureLoader();
 
+  function setStatus(msg) {
+    document.getElementById('status-text').textContent = msg;
+  }
+
   function loadTexture(url) {
-    loader.load(url, (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace;
-      if (currentTex === mat.map && currentTex) currentTex.dispose();
-      currentTex = tex;
-      mat.map = tex;
-      mat.displacementMap = tex;
-      mat.needsUpdate = true;
-    });
+    setStatus('Loading texture...');
+    loader.load(
+      url,
+      (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        if (currentTex && currentTex !== mat.map) currentTex.dispose();
+        currentTex = tex;
+        mat.map = tex;
+        mat.displacementMap = tex;
+        mat.needsUpdate = true;
+        setStatus('Texture ready');
+      },
+      undefined,
+      (err) => {
+        setStatus('Error: ' + (err?.message || String(err)));
+      }
+    );
   }
 
   loadTexture('./texture.jpg');
 
   function applyImageFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
-    URL.revokeObjectURL(mat.map?.image?.src ?? '');
+    if (currentTex && currentTex.image && currentTex.image.src) {
+      URL.revokeObjectURL(currentTex.image.src);
+    }
     loadTexture(URL.createObjectURL(file));
   }
 
